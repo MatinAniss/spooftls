@@ -9,7 +9,7 @@ use pki_types::{ServerName, UnixTime};
 use super::handy::NoClientSessionStorage;
 use super::hs;
 use crate::builder::ConfigBuilder;
-use crate::client::{EchMode, EchStatus};
+use crate::client::{EchMode, EchStatus, Fingerprint, Spoof};
 use crate::common_state::{CommonState, Protocol, Side};
 use crate::conn::{ConnectionCore, UnbufferedConnectionCommon};
 use crate::crypto::{CryptoProvider, SupportedKxGroup};
@@ -264,6 +264,9 @@ pub struct ClientConfig {
 
     /// How to offer Encrypted Client Hello (ECH). The default is to not offer ECH.
     pub(super) ech_mode: Option<EchMode>,
+
+    /// TLS fingerprint spoof configuration
+    pub spoof: Option<Spoof>,
 }
 
 impl ClientConfig {
@@ -424,6 +427,11 @@ impl ClientConfig {
         self.time_provider
             .current_time()
             .ok_or(Error::FailedToGetCurrentTime)
+    }
+
+    /// Set a specific fingeprint spoof for the ClientConfig
+    pub fn with_fingerprint(&mut self, fingerprint: Fingerprint) {
+        self.spoof = Some(Spoof::new(fingerprint));
     }
 }
 

@@ -433,13 +433,30 @@ fn emit_client_hello_for_retry(
     // We don't do renegotiation at all, in fact.
     cipher_suites.push(CipherSuite::TLS_EMPTY_RENEGOTIATION_INFO_SCSV);
 
-    let mut chp_payload = ClientHelloPayload {
-        client_version: ProtocolVersion::TLSv1_2,
-        random: input.random,
-        session_id: input.session_id,
-        cipher_suites,
-        compression_methods: vec![Compression::Null],
-        extensions: exts,
+    let (mut chp_payload, grease_ext) = match config.spoof.as_ref() {
+        Some(spoof) => {
+            // Spoof with fingerprint if available
+            spoof.spoof_ciphers(&mut cipher_suites);
+            spoof.spoof_extensions(
+                &config,
+                input.server_name.clone(),
+                input.random,
+                input.session_id,
+                cipher_suites,
+                exts,
+            )
+        }
+        None => (
+            ClientHelloPayload {
+                client_version: ProtocolVersion::TLSv1_2,
+                random: input.random,
+                session_id: input.session_id,
+                cipher_suites,
+                compression_methods: vec![Compression::Null],
+                extensions: exts,
+            },
+            None,
+        ),
     };
 
     let ech_grease_ext = config
@@ -467,7 +484,12 @@ fn emit_client_hello_for_retry(
         // If we haven't offered ECH, and have no ECH state, then consider whether to use GREASE
         // ECH.
         (EchStatus::NotOffered, None) => {
-            if let Some(grease_ext) = ech_grease_ext {
+            if let Some(grease_ext) = grease_ext {
+                cx.data.ech_status = EchStatus::Grease;
+                // Store the GREASE ECH extension in case we need to carry it forward in a
+                // subsequent hello.
+                input.prev_ech_ext = Some(grease_ext);
+            } else if let Some(grease_ext) = ech_grease_ext {
                 // Add the GREASE ECH extension.
                 let grease_ext = grease_ext?;
                 chp_payload

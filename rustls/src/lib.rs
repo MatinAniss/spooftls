@@ -563,6 +563,7 @@ pub mod client {
     mod ech;
     pub(super) mod handy;
     mod hs;
+    mod spoof;
     #[cfg(feature = "tls12")]
     mod tls12;
     mod tls13;
@@ -578,6 +579,7 @@ pub mod client {
     pub use handy::AlwaysResolvesClientRawPublicKeys;
     #[cfg(any(feature = "std", feature = "hashbrown"))]
     pub use handy::ClientSessionMemoryCache;
+    pub use spoof::{Fingerprint, Spoof};
 
     /// Dangerous configuration that should be audited and used with extreme care.
     pub mod danger {
